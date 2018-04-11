@@ -16,8 +16,28 @@ app.use(session({
 }));
 app.use(express.static(`${__dirname}/../build`));
 
-app.post('/auth/callback', (req, res) => {
-  // Add code here
+app.get('/auth/callback', (req, res) => {
+  axios.post(`https://${process.env.REACT_APP_AUTH0_DOMAIN}/oauth/token`, {
+    client_id: process.env.REACT_APP_AUTH0_CLIENT_ID,
+    client_secret: process.env.REACT_APP_AUTH0_CLIENT_SECRET,
+    code: req.query.code,
+    grant_type: 'authorization_code',
+    redirect_uri: `http://${req.headers.host}/auth/callback`,
+}).then(accessTokenResponse => {
+  const accessToken = accessTokenResponse.data.access_token;
+  return axios.get(`https://${process.env.REACT_APP_AUTH0_DOMAIN}/userinfo/?access_token=${accessToken}`).then(userInfoResponse => {
+    const userData = userInfoResponse.data;
+  console.log(userData);
+  req.session.user = userData;
+res.redirect('/');
+})
+}).catch(error => {
+  res.status(500).json({message :"error occured"});
+  console.log('server error', error);
+})
+
+
+
 });
 
 app.post('/api/logout', (req, res) => {
